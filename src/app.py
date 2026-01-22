@@ -10,22 +10,59 @@ USER_ID = 611
 
 st.set_page_config(page_title="Movie Guru SERG Pro", layout="wide", page_icon="🎬")
 
+# --- CSS İLE MOBİL DÜZENLEME (SPLIT VIEW) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #0E1117; color: #E0E0E0; }
     
+    /* Masaüstü Hover Efekti */
     div[data-testid="stImage"] img { border-radius: 8px; transition: transform 0.3s ease; }
     div[data-testid="stImage"] img:hover { transform: scale(1.05); z-index: 10; }
 
-    .scroll-container { display: flex; flex-direction: row; overflow-x: auto; gap: 15px; padding: 20px 0; white-space: nowrap; }
-    .scroll-container::-webkit-scrollbar { height: 8px; }
+    /* Yatay Kaydırma (Theater Bölümü İçin) */
+    .scroll-container { display: flex; flex-direction: row; overflow-x: auto; gap: 15px; padding: 20px 0; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+    .scroll-container::-webkit-scrollbar { height: 4px; }
     .scroll-container::-webkit-scrollbar-thumb { background-color: #5E6AD2; border-radius: 4px; }
     
-    .movie-card-scroll { flex: 0 0 150px; width: 150px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+    .movie-card-scroll { flex: 0 0 120px; width: 120px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; align-items: center; }
     .movie-card-scroll img { width: 100%; border-radius: 8px; margin-bottom: 8px; aspect-ratio: 2/3; object-fit: cover; }
-    .movie-title-scroll { font-size: 13px; font-weight: 600; color: white; white-space: normal; text-align: center; height: 35px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .ticket-btn { display: inline-block; width: 100%; background-color: #ff4b4b; color: white; text-decoration: none; padding: 5px 0; border-radius: 5px; font-size: 11px; font-weight: bold; text-align: center; margin-top: auto; }
+    .movie-title-scroll { font-size: 11px; font-weight: 600; color: white; white-space: normal; text-align: center; height: 30px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .ticket-btn { display: inline-block; width: 100%; background-color: #ff4b4b; color: white; text-decoration: none; padding: 4px 0; border-radius: 5px; font-size: 10px; font-weight: bold; text-align: center; margin-top: auto; }
+
+    /* --- 📱 MOBILE SPLIT VIEW FIX --- */
+    @media (max-width: 768px) {
+        
+        /* 1. ANA KOLONLARI YAN YANA ZORLA (%50 - %50) */
+        /* Bu kod, Explore ve Results kolonlarını mobilde yan yana tutar */
+        div[data-testid="column"] {
+            width: 50% !important;
+            flex: 0 0 50% !important;
+            min-width: 50% !important;
+            padding: 0 4px !important;
+        }
+
+        /* 2. İÇERİDEKİ GRID YAPISINI BOZMA (İç içe kolon varsa onları %100 yap) */
+        /* Bu sayede %50'lik alanın içinde posterler çok küçülmez, alt alta dizilir */
+        div[data-testid="column"] div[data-testid="column"] {
+            width: 100% !important;
+            flex: 0 0 100% !important;
+            margin-bottom: 10px !important;
+        }
+
+        /* 3. Resim Boyutlarını Ayarla */
+        div[data-testid="stImage"] img {
+            max-height: 160px !important; /* Poster boyunu biraz sınırladık */
+            width: auto !important;
+            margin: 0 auto !important;
+            object-fit: cover !important;
+        }
+
+        /* 4. Metinleri Küçült */
+        h3 { font-size: 1rem !important; text-align: center; }
+        div[style*="font-size:10px"] { font-size: 9px !important; text-align: center; }
+        button { padding: 0.2rem !important; min-height: 30px !important; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -41,7 +78,6 @@ def super_fan_recommendation(user_movies):
     try:
         ratings_df = pd.read_csv("data/ratings.csv")
     except:
-        # Try parent directory if running from src
         try:
             ratings_df = pd.read_csv("../data/ratings.csv")
         except:
@@ -93,7 +129,7 @@ def fetch_search(query):
 
 def fetch_popular():
     data = safe_request(f"{BASE_URL}/movie/popular?api_key={API_KEY}")
-    return data.get('results', [])[:6]
+    return data.get('results', [])[:9]
 
 def fetch_now_playing():
     data = safe_request(f"{BASE_URL}/movie/now_playing?api_key={API_KEY}&region=TR")
@@ -106,7 +142,6 @@ def get_genres_txt(ids):
 def save_to_csv(movie_id, rating=5.0):
     try:
         path = "data/ratings.csv"
-        # Check if file exists to handle header correctly or path issues
         new_data = pd.DataFrame([[USER_ID, movie_id, rating]], columns=['userId', 'movieId', 'rating'])
         try:
             new_data.to_csv(path, mode='a', header=False, index=False)
@@ -117,44 +152,62 @@ def save_to_csv(movie_id, rating=5.0):
 
 if 'my_movies' not in st.session_state: st.session_state.my_movies = []
 
-st.title("🎬 Movie Guru SERG Pro")
+st.title("🍿 𝖒𝖔𝖛𝖎𝖊 𝖌𝖚𝖗𝖚 𝖘𝖊𝖗𝖌 𝖕𝖗𝖔")
 st.caption(f"User {USER_ID} | Guru Intelligence Engine")
 st.divider()
 
-c1, c2 = st.columns([1, 2], gap="large")
+# --- DEĞİŞİKLİK 1: ARAMA ÇUBUĞUNU KOLONLARIN ÜSTÜNE ALDIK ---
+st.subheader("1. 𝖆𝖉𝖉 𝖋𝖆𝖛𝖔𝖗𝖎𝖙𝖊𝖘 ")
+q = st.text_input("Search Movie...", placeholder="Type movie name here...", label_visibility="collapsed")
+
+# --- DEĞİŞİKLİK 2: KOLON YAPISINI YARI YARIYA YAPTIK ---
+# Mobilde CSS bunları %50 %50 yapacak.
+c1, c2 = st.columns(2, gap="small") 
+
+# --- SOL KOLON (EXPLORE) ---
 with c1:
-    st.subheader("1. Add Favorites")
-    q = st.text_input("Search...", placeholder="Movie name...")
-    st.write("---")
-    st.subheader("🔥 Quick Add")
+    st.subheader("🌍 𝖊𝖝𝖕𝖑𝖔𝖗𝖊") 
     pop = fetch_popular()
-    cols = st.columns(3)
+    
+    # Masaüstünde Grid (3'lü), Mobilde Tek Sıra
+    # CSS'deki kural sayesinde mobilde bu iç kolonlar %100 genişliğe dönecek
+    # ve posterler "Explore" sütunu içinde alt alta dizilecek.
+    cols = st.columns(3) 
     for i, m in enumerate(pop):
         with cols[i%3]:
             if m.get('poster_path'): st.image(f"{IMAGE_BASE_URL}{m.get('poster_path')}", use_container_width=True)
-            if st.button("➕", key=f"p{m['id']}"):
+            if st.button("➕", key=f"p{m['id']}", help=f"Add {m['title']}"):
                 if not any(x['id']==m['id'] for x in st.session_state.my_movies):
                     st.session_state.my_movies.append({'id':m['id'], 'title':m['title'], 'poster':m.get('poster_path'), 'genre_ids':m.get('genre_ids',[])})
                     save_to_csv(m['id'])
                     st.toast(f"Added {m['title']}", icon="✅")
+
+# --- SAĞ KOLON (RESULTS) ---
 with c2:
     if q:
-        st.subheader("Results")
+        st.subheader("🔍 𝖗𝖊𝖘𝖚𝖑𝖙𝖘")
         res = fetch_search(q)
-        cols = st.columns(4)
+        
+        # Masaüstünde Grid (2'li), Mobilde Tek Sıra
+        # Arama sonuçları için 2 sütun daha okunaklı olur dar alanda
+        cols_res = st.columns(2)
         for i, m in enumerate(res):
-            with cols[i%4]:
+            with cols_res[i%2]:
                 if m.get('poster_path'): st.image(f"{IMAGE_BASE_URL}{m.get('poster_path')}", use_container_width=True)
-                st.markdown(f"<div style='font-size:12px;font-weight:bold;white-space:nowrap;overflow:hidden;'>{m['title']}</div>", unsafe_allow_html=True)
+                # İsimleri ortala ve kısalt
+                st.markdown(f"<div style='font-size:10px;font-weight:bold;text-align:center;white-space:nowrap;overflow:hidden;'>{m['title']}</div>", unsafe_allow_html=True)
                 if st.button("Add", key=f"s{m['id']}", use_container_width=True):
                     if not any(x['id']==m['id'] for x in st.session_state.my_movies):
                         st.session_state.my_movies.append({'id':m['id'], 'title':m['title'], 'poster':m.get('poster_path'), 'genre_ids':m.get('genre_ids',[])})
                         save_to_csv(m['id'])
                         st.toast("Added!", icon="✅")
+    else:
+        # Arama yapılmadıysa boşluk bırakmamak için bilgilendirme
+        st.info("Search to see results here ➡️")
 
 st.divider()
 
-st.subheader("2. Your Watchlist")
+st.subheader(" 𝖞𝖔𝖚𝖗 𝖜𝖆𝖙𝖈𝖍𝖑𝖎𝖘𝖙 ")
 if st.session_state.my_movies:
     cols = st.columns(8)
     for i, m in enumerate(st.session_state.my_movies):
@@ -167,11 +220,11 @@ else: st.info("Add movies to activate the recommendation engine.")
 
 st.divider()
 
-if st.button("🚀 RUN ENGINE", type="primary", use_container_width=True):
+if st.button("🚀 𝖗𝖚𝖓 𝖊𝖓𝖌𝖎𝖓𝖊 ", type="primary", use_container_width=True):
     c_off, c_on = st.columns(2, gap="large")
     
     with c_off:
-        st.header("🧠 Guru Intelligence")
+        st.header("🧠 Guru Intelligence ")
         if st.session_state.my_movies:
             
             recs, reason = super_fan_recommendation(st.session_state.my_movies)
@@ -210,7 +263,7 @@ if st.button("🚀 RUN ENGINE", type="primary", use_container_width=True):
 
 st.divider()
 
-st.header("🎟️ In Theaters")
+st.header("🎟️ 𝖎𝖓 𝖙𝖍𝖊𝖆𝖙𝖊𝖗𝖘 ")
 now = fetch_now_playing()
 if now:
     h = ""
